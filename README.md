@@ -12,8 +12,6 @@ Have an idea to develop a **Laravel** project that has push notification, this r
 
 
 
-## Prerequisite
-
 Uses Composer for laravel installation. Get Composer [here](https://getcomposer.org/download/).
 
 ## Thanks for downloading this project!
