@@ -38,7 +38,7 @@ class HomeController extends Controller
     $firebaseTokens = User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
 
     if (empty($firebaseTokens)) {
-        return response()->json(['message' => 'No devices registered for notifications'], 400);
+        return redirect()->route('home')->with('error', 'No devices registered for notifications');
     }
 
     $client = new GoogleClient();
@@ -48,6 +48,7 @@ class HomeController extends Controller
     $accessToken = $token['access_token'];
 
     $projectId = config('services.firebase.project_id');
+    $allSuccess = true;
     $responses = [];
 
     foreach ($firebaseTokens as $token) {
@@ -64,13 +65,17 @@ class HomeController extends Controller
             ],
         ]);
 
-        $responses[] = $response->json();
+        if (!$response->successful()) {
+            $allSuccess = false;
+            $responses[] = $response->json();
+        }
     }
 
-    return response()->json([
-        'message' => 'Notifications sent successfully',
-        'responses' => $responses,
-    ]);
+    if ($allSuccess) {
+        return redirect()->route('home')->with('success', 'Notifications sent successfully');
+    } else {
+        return redirect()->route('home')->with('error', 'Some notifications failed to send')->with('details', $responses);
+    }
 }
 
 public function updateToken(Request $request)
