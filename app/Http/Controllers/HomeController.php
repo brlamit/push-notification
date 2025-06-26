@@ -1,80 +1,87 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Http;
+use Google_Client as GoogleClient;
 
 class HomeController extends Controller
 {
-    /**
-     * Create a new controller instance.
-     *
-     * @return void
-     */
     public function __construct()
     {
         $this->middleware('auth');
     }
 
-    /**
-     * Show the application dashboard.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
     public function index()
     {
         return view('home');
     }
-    /**
-     * Write code on Method
-     *
-     * @return response()
-     */
+
     public function saveToken(Request $request)
     {
-        auth()->user()->update(['device_token'=>$request->token]);
-        return response()->json(['token saved successfully.']);
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+
+        auth()->user()->update(['fcm_token' => $request->token]);
+        return response()->json(['message' => 'Token saved successfully']);
     }
 
-    /**
-     * Write code on Method
-     *
-     * @return response()
-     */
-    public function sendNotification(Request $request)
-    {
-        $firebaseToken = User::whereNotNull('device_token')->pluck('device_token')->all();
+   public function sendNotification(Request $request)
+{
+    $request->validate([
+        'title' => 'required|string',
+        'body' => 'required|string',
+    ]);
 
-        $SERVER_API_KEY = 'BP6Qphw5JYTJIaCNNwpjPfyWWg9QJ-R-kRErkSJz5vRpq5yzmRKCWbJMfq39OcGcPajVo6DjiCbAOVHAjJk9MPs';
+    $firebaseTokens = User::whereNotNull('fcm_token')->pluck('fcm_token')->toArray();
 
-        $data = [
-            "registration_ids" => $firebaseToken,
-            "notification" => [
-                "title" => $request->title,
-                "body" => $request->body,
-                "content_available" => true,
-                "priority" => "high",
-            ]
-        ];
-        $dataString = json_encode($data);
-
-        $headers = [
-            'Authorization: key=' . $SERVER_API_KEY,
-            'Content-Type: application/json',
-        ];
-
-        $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $dataString);
-
-        $response = curl_exec($ch);
-
-        dd($response);
+    if (empty($firebaseTokens)) {
+        return response()->json(['message' => 'No devices registered for notifications'], 400);
     }
+
+    $client = new GoogleClient();
+    $client->setAuthConfig(config('services.firebase.credentials_path'));
+    $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+    $token = $client->fetchAccessTokenWithAssertion();
+    $accessToken = $token['access_token'];
+
+    $projectId = config('services.firebase.project_id');
+    $responses = [];
+
+    foreach ($firebaseTokens as $token) {
+        $response = Http::withHeaders([
+            'Authorization' => "Bearer $accessToken",
+            'Content-Type' => 'application/json',
+        ])->post("https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send", [
+            'message' => [
+                'token' => $token,
+                'notification' => [
+                    'title' => $request->title,
+                    'body' => $request->body,
+                ],
+            ],
+        ]);
+
+        $responses[] = $response->json();
+    }
+
+    return response()->json([
+        'message' => 'Notifications sent successfully',
+        'responses' => $responses,
+    ]);
+}
+
+public function updateToken(Request $request)
+{
+    $request->validate([
+        'token' => 'required|string',
+    ]);
+    $user = auth()->user();
+    $user->fcm_token = $request->token;
+    $user->save();
+    return response()->json(['message' => 'Token updated successfully']);
+
+}
 }

@@ -36,20 +36,21 @@
     </div>
 </div>
 
+
+
 <script src="https://www.gstatic.com/firebasejs/7.23.0/firebase.js"></script>
 <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
 <script>
 
     var firebaseConfig = {
-        apiKey: "XXXXXXXXXXX",
-        authDomain: "XXXXXXXX",
-        projectId: "XXXXXXXX",
-        storageBucket: "XXXXXXXXXX",
-        messagingSenderId: "XXXXXXXXX",
-        appId: "XXXXXXXXXXXXX",
-        measurementId: "G-XXXXX"
-    };
-
+   apiKey: "AIzaSyBL2ovMoXlS5IW-bhQekLptYcYCFAVkpv0",
+  authDomain: "notify-2932b.firebaseapp.com",
+  projectId: "notify-2932b",
+  storageBucket: "notify-2932b.firebasestorage.app",
+  messagingSenderId: "742883520667",
+  appId: "1:742883520667:web:dcf2329f7223b7229fd63e",
+  measurementId: "G-W6T8L5YG4P"
+};
     firebase.initializeApp(firebaseConfig);
     const messaging = firebase.messaging();
 
